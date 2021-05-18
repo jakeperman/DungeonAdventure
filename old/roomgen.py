@@ -1,6 +1,6 @@
 # room class
 import random
-from old_game_files import advtools
+from old import advtools
 import math
 
 color = advtools.Color()

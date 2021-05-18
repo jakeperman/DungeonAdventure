@@ -6,12 +6,14 @@ ADVENTURE PROGRAM
 3.) Expand your program to make it a real adventure game
 
 '''
-from old_game_files.roomgen import *
-from old_game_files import loot
-from old_game_files.entities import *
+from typing import List
+
+from old.roomgen import *
+from old import loot
+from old.entities import *
 import os
-from old_game_files.player import *
-from old_game_files.loot_table import *
+from old.player import *
+from old.loot_table import *
 
 border = advtools.border
 # room instances
@@ -70,6 +72,7 @@ done = False
 firstdeath = True
 moves = 0
 Loot = loot.Loot()
+all_loot = []
 
 
 # create instance of player
@@ -485,7 +488,22 @@ def user_input(userinput="none", prompt="default", options=()):
             continue
         # the function returns the user input as a value usable as required by a function or otherwise
         return inp
-    
+
+
+def gen_loot() -> List[Item]:
+    total_loot = []
+    for each in rooms[1:]:
+        loot_tier = random.choices([0, 1, 2, 3], weights=[5, 4, 3, 1.5], k=1)[0]
+        loot = Loot.generate(3, loot_tier, loot_pool)
+        each.add_loot(loot)
+        total_loot.append(loot)
+    # creates starting item in the entry room
+    stairwell.add_loot(eyepatch)
+    spec_rooms = random.choices(rooms, k=4)
+    for i, each in enumerate(integrals):
+        spec_rooms[i].add_loot(each)
+
+    return total_loot
 
 
 def main():
@@ -494,6 +512,7 @@ def main():
         loot_tier = random.choices([0, 1, 2, 3], weights=[5, 4, 3, 1.5], k=1)[0]
         loot = Loot.generate(3, loot_tier, loot_pool)
         each.add_loot(loot)
+        all_loot.append(loot)
     # creates starting item in the entry room
     stairwell.add_loot(eyepatch)
     spec_rooms = random.choices(rooms, k=4)

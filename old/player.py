@@ -1,4 +1,4 @@
-from old_game_files.advtools import *
+from old.advtools import *
 
 
 class Player:

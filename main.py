@@ -5,6 +5,8 @@ from arcade.experimental.lights import Light, LightLayer
 import items
 import random
 import time
+import itertools
+from old import backend
 
 SW, SH = 1600, 900
 up = 0
@@ -21,10 +23,13 @@ ACTION_RANGE = 80 * SCALE
 TORCH_RADI = [random.randrange(165, 230) * SCALE for r in range(50)]
 CANDLE_RADI = [random.randrange(325, 425) * SCALE for x in range(50)]
 
+# TODO: Grid Based Inventory
+# TODO: Immersive Hotbar, (1-9), Opaque, hover next to player
+
 class Dialogue:
-    def __init__(self, text, delay=1):
+    def __init__(self, *args, delay=1):
         # self.text = [text for t in text]
-        self.text = text
+        self.text = ' '.join(args)
         self.index = 0
         self.print_index = 0
         self.delay = delay
@@ -49,7 +54,7 @@ class TorchLight(Light):
 
 class Game(arcade.Window):
     def __init__(self):
-        super(Game, self).__init__(SW, SH, "game")
+        super(Game, self).__init__(SW, SH, "Adventure Dungeon")
         map = arcade.tilemap.read_tmx("resources/dungeon.tmx")
 
         # process each layer from tilemap and create a spritelist from it
@@ -95,13 +100,16 @@ class Game(arcade.Window):
         self.light_layer = None
         self.player_light = None
         self.torches = {}
-        self.text = Dialogue("Welcome to Adventure Game!", 3)
+        self.text = Dialogue("Welcome to Adventure Game!", delay=3)
         self.candle = None
         self.candle_light = None
         self.start_time = time.time()
 
         candle = items.Candle(self.player.right, self.player.center_y, .5, False)
         self.player.set_candle(candle)
+
+        self.room_loot = backend.gen_loot()
+        self.show_text = False
         self.setup()
 
     def setup(self):
@@ -111,7 +119,7 @@ class Game(arcade.Window):
         self.light_layer.set_background_color(arcade.color.BLACK)
 
         # create the player light
-        radius = 150 * SCALE
+        radius = 100 * SCALE
         mode = 'soft'
         color = arcade.csscolor.WHITE
         self.player_light = Light(0, 0, radius, color, mode)
@@ -127,6 +135,14 @@ class Game(arcade.Window):
             light = TorchLight(torch.center_x, torch.center_y, TORCH_RADIUS)
             self.light_layer.add(light)
             self.torches[torch] = light
+
+        loot = []
+        for room in self.room_loot:
+            loot += room
+        for chest, loot in zip(self.chests, loot):
+            chest.loot = loot
+
+
 
     def on_draw(self):
         arcade.start_render()
@@ -150,23 +166,22 @@ class Game(arcade.Window):
 
         if self.candle:
             fuel_len = self.candle.fuel_level / 2
-            if self.candle_light.radius > 0:
+            if self.candle_light.radius > 1:
                 # draw the candle fuel bar above player
-                arcade.draw_lrtb_rectangle_filled(self.player.left, self.player.left + fuel_len, self.player.top + 10, self.player.top + 5, (255, 213, 105))
+                arcade.draw_lrtb_rectangle_filled(self.player.left, self.player.left + fuel_len + 1, self.player.top + 10, self.player.top + 5, (255, 213, 105))
         # draw dialogue text (test)
-        if time.time() - self.start_time < 10:
+        if time.time() - self.start_time < 5:
             x = self.scroll_manager.get_view('right')
             y = self.scroll_manager.get_view('bottom')
             arcade.draw_text("press 'space' to toggle your candle", x - (SW / 2), y + 225, arcade.color.CREAM, 20,
                              anchor_x='center')
-            arcade.draw_text("press 'q' to toggle candles on wall (some candles can't be toggled)", x - (SW / 2), y + 250,
+            arcade.draw_text("press 'q' to toggle torches on the wall (some torches can't be toggled)", x - (SW / 2), y + 250,
                              arcade.color.CREAM, 20, anchor_x='center')
-        if self.text.printing:
+
+        if self.show_text:
             x = self.scroll_manager.get_view('right')
             y = self.scroll_manager.get_view('bottom')
-            arcade.draw_text("press 'space' to toggle your candle", x-(SW/2), y+225, arcade.color.CREAM, 20, anchor_x='center')
-            arcade.draw_text("press 'q' to toggle candles on wall (some candles can't be toggled)", x-(SW/2), y+250, arcade.color.CREAM, 20, anchor_x='center')
-            arcade.draw_text(self.text.output(), x - (SW/2), y + 200, arcade.color.CREAM, 20, anchor_x='center')
+            arcade.draw_text(self.text.output(), x - (SW/2), y + 200, arcade.color.CREAM, 20, anchor_x='center', align='center')
 
     def on_update(self, delta_time: float):
         # update physics engine
@@ -177,7 +192,10 @@ class Game(arcade.Window):
             # calculate ratio of remaining fuel
             fuel_ratio = self.candle.fuel_level / 100
             # set light radius progressively smaller as fuel runs out
-            self.candle_light.radius = CANDLE_RADI[int(self.light_index)] - ((400 - (400 * fuel_ratio))/4)
+            if fuel_ratio < .5:
+                self.candle_light.radius = CANDLE_RADI[int(self.light_index)] - ((400 - (400 * fuel_ratio))/5)
+            else:
+                self.candle_light.radius = CANDLE_RADI[int(self.light_index)]
             # change candle position based on player direction
             if self.player.direction == 1:
                 self.player.candle.position = self.player.right, self.player.center_y
@@ -188,7 +206,7 @@ class Game(arcade.Window):
             # if the candle runs out of fuel, disable it and re-enable players light source
             if self.candle.fuel_level <= 0:
                 self.candle_light.radius = 0
-                self.player_light.radius = 150
+                self.player_light.radius = 100
 
         # make player light follow
         self.player_light.position = self.player.position
@@ -208,8 +226,9 @@ class Game(arcade.Window):
         self.player.update()
         # update keys
         self.key_change()
-        # advance dialogue text
-        self.text.advance()
+        # advance dialogue text\
+        if self.text:
+            self.text.advance()
 
 
     # movement system
@@ -250,7 +269,23 @@ class Game(arcade.Window):
         if key in list(self.controls.keys()):
             self.keys_pressed.append(key)
         elif key == 'q':  # toggle torches on the wall on/off
+            chest = arcade.get_closest_sprite(self.player, self.chests)
+            dist = chest[1]
+            chest = chest[0]
+            if dist < ACTION_RANGE:
+                item = chest.loot
+                if item:
+                    self.show_text = True
+                    self.text = Dialogue(f"You found a {item.name}.\n", item.description, delay=3)
+                    chest.loot = None
+                else:
+                    self.show_text = True
+                    self.text = Dialogue(f"You already found the loot in this chest.")
+
             self.toggle_torch()
+        elif symbol == arcade.key.SPACE and self.show_text:
+            self.show_text = False
+            self.text = None
 
         elif key == 'm':
             print("mouse_pos:", self.mouse_pos)
@@ -264,14 +299,15 @@ class Game(arcade.Window):
                 self.player.toggle_candle()  # toggle
                 self.light_layer.remove(self.candle_light)  # remove light source
                 self.perma_torches.remove(self.candle)  # remove from torches (it will not draw anymore)
-                self.player_light.radius = 150  # re-enable player default light
+                self.player_light.radius = 150 * SCALE # re-enable player default light
                 self.candle = None  # set candle to None
             # if player isn't holding candle, toggle it on
             else:
                 # toggle
                 self.player.toggle_candle()
                 # create lightsource object
-                light = Light(self.player.candle.center_x, self.player.candle.center_y, 400, TORCH_LIGHT, 'soft')
+
+                light = Light(self.player.candle.center_x, self.player.candle.center_y, 400 * SCALE, TORCH_LIGHT, 'soft')
                 self.perma_torches.append(self.player.candle)  # add player candle to perma_torches (cant be toggled by pressing q)
                 self.candle = self.player.candle  # set the candle to the players candle
                 self.candle_light = light  # set candle light to light object

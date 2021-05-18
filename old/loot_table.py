@@ -1,4 +1,4 @@
-from old_game_files.loot import *
+from old.loot import *
 
 # Creation of object instances
 # Creation of Junk

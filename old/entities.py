@@ -1,4 +1,4 @@
-from old_game_files import advtools
+from old import advtools
 
 color = advtools.Color()
 hostile = "hostile"
