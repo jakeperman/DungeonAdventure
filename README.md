@@ -2,7 +2,7 @@
 
 Dungeon Adventure is a top-down dungeon crawl game made with the Python Arcade module.
 
-<h3>Dungeon Adventure</h3>
+<h3>Alpha v0.1</h3>
 <!-- <h4></h4> -->
 <ol>
   
