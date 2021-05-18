@@ -1,0 +1,8 @@
+{
+    "hp": 12,
+    "inv": [
+        "x",
+        "y"
+    ],
+    "location": "stairwell"
+}
