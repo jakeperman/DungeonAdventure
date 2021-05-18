@@ -1,13 +1,9 @@
 <img align="left" src="http://hermonswebsites.com/Classes/CS/python.png"><H2>Chapter 8 Lists/Strings</H2>
 
-In this chapter you will be learning about Lists, Strings, Text-Formatting and Secret Codes. 
+Dungeon Adventure is a top-down dungeon crawl game made with the Python Arcade module.
 
-
-<h3>Jedi Tasks</h3>
+<h3>Dungeon Adventure</h3>
 <ol>
-    <li>Jedi Training</li>
-  <li>Months Program</li>
-  <li>Decryption Program</li>
-  <li>Adventure Game</li>
+    Alpha v0.1
 
   </ol>
