@@ -1,6 +1,6 @@
 import json
 
-with open('test.txt','r+') as data:
+with open('test.txt', 'r+') as data:
     data.seek(0)
     backup = json.load(data)
     print(backup)

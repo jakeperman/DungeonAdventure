@@ -1,5 +1,5 @@
-from advtools import *
-import time
+from old_game_files.advtools import *
+
 
 class Player:
     def __init__(self, player_health, stamina, inv=[], pos=0, room_start=None):

@@ -1,4 +1,5 @@
-import advtools
+from old_game_files import advtools
+
 color = advtools.Color()
 hostile = "hostile"
 passive = "passive"

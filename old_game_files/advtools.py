@@ -1,6 +1,5 @@
 import random
 import time
-import loot
 import shutil
 import sys
 weapon = "weapon"

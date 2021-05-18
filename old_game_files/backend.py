@@ -6,17 +6,12 @@ ADVENTURE PROGRAM
 3.) Expand your program to make it a real adventure game
 
 '''
-import re
-import random
-import time
-import advtools
-from advtools import load_bar
-from roomgen import *
-import loot
-from entities import *
-import os, sys
-from player import *
-from loot_table import *
+from old_game_files.roomgen import *
+from old_game_files import loot
+from old_game_files.entities import *
+import os
+from old_game_files.player import *
+from old_game_files.loot_table import *
 
 border = advtools.border
 # room instances

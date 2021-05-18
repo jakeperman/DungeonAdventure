@@ -1,7 +1,6 @@
 # room class
-import loot
 import random
-import advtools
+from old_game_files import advtools
 import math
 
 color = advtools.Color()
