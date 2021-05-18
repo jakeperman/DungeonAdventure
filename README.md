@@ -16,8 +16,4 @@ Dungeon Adventure is a top-down dungeon crawl game made with the Python Arcade m
     - has limited fuel
     - light radius decreases as fuel dwindles
   </ol>
-  <ol>
-    TODO:
-      - Implement Loot and inventory system
-      - Implement combat system w/monsters
- </ol>
+  
