@@ -1,6 +1,5 @@
 from old.advtools import *
 
-
 class Player:
     def __init__(self, player_health, stamina, inv=[], pos=0, room_start=None):
         self.hp = player_health
@@ -16,8 +15,9 @@ class Player:
     def damage(self, damage):
         self.hp -= damage
         if self.hp <= 0:
-            fight = False
-            kill()
+            # fight = False
+            # kill()
+            pass
         else:
             amount = ""
             if damage <= 2:

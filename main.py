@@ -72,7 +72,7 @@ class Game(arcade.Window):
         self.scroll_manager = screen_scroll.ScrollManager(self)
 
         # create the player
-        self.player = player_sprite.Player(2816*SCALE, 192*SCALE, SCALE)
+        self.player = player_sprite.Player(2816*SCALE, 192*SCALE, SCALE, player_sprite.Inventory(10))
         # initialize control values
         self.controls = {'w': MOVEMENT_SPEED, 'a': -MOVEMENT_SPEED, 's': -MOVEMENT_SPEED, 'd': MOVEMENT_SPEED}
         self.keys_pressed = []
@@ -108,8 +108,12 @@ class Game(arcade.Window):
         candle = items.Candle(self.player.right, self.player.center_y, .5, False)
         self.player.set_candle(candle)
 
+        # generate loot
         self.room_loot = backend.gen_loot()
         self.show_text = False
+
+        # inv show
+        self.show_inv = False
         self.setup()
 
     def setup(self):
@@ -136,6 +140,8 @@ class Game(arcade.Window):
             self.light_layer.add(light)
             self.torches[torch] = light
 
+
+        # add loot to chests
         loot = []
         for room in self.room_loot:
             loot += room
@@ -169,7 +175,7 @@ class Game(arcade.Window):
             if self.candle_light.radius > 1:
                 # draw the candle fuel bar above player
                 arcade.draw_lrtb_rectangle_filled(self.player.left, self.player.left + fuel_len + 1, self.player.top + 10, self.player.top + 5, (255, 213, 105))
-        # draw dialogue text (test)
+        # draw tutorial text for the first 5 seconds after startup
         if time.time() - self.start_time < 5:
             x = self.scroll_manager.get_view('right')
             y = self.scroll_manager.get_view('bottom')
@@ -178,10 +184,25 @@ class Game(arcade.Window):
             arcade.draw_text("press 'q' to toggle torches on the wall (some torches can't be toggled)", x - (SW / 2), y + 250,
                              arcade.color.CREAM, 20, anchor_x='center')
 
+        # show dialogue text
         if self.show_text:
             x = self.scroll_manager.get_view('right')
             y = self.scroll_manager.get_view('bottom')
             arcade.draw_text(self.text.output(), x - (SW/2), y + 200, arcade.color.CREAM, 20, anchor_x='center', align='center')
+
+        if self.show_inv:
+            inv_text = self.player.inv.display()
+            leng = self.player.inv.get_len() * 20
+            top = self.player.center_y + leng/2
+            bottom = self.player.center_y - leng/2
+            # ban = arcade.Sprite("resources/sprites/Dungeon_Tileset/sprite_074.png", self.player.right + 10, self.player.center_y, image_height=leng, image_width=150)
+            # ban.draw()
+            arcade.draw_lrtb_rectangle_filled(self.player.right + 10, self.player.center_x + 200, top, bottom, (118, 74, 45))
+            arcade.draw_text(inv_text, self.player.right + 15, self.player.center_y, (255, 253, 208, 200), 11,
+                             anchor_x='left', anchor_y='center', align='left', font_name='Chalkboard')
+
+
+
 
     def on_update(self, delta_time: float):
         # update physics engine
@@ -269,20 +290,15 @@ class Game(arcade.Window):
         if key in list(self.controls.keys()):
             self.keys_pressed.append(key)
         elif key == 'q':  # toggle torches on the wall on/off
-            chest = arcade.get_closest_sprite(self.player, self.chests)
-            dist = chest[1]
-            chest = chest[0]
-            if dist < ACTION_RANGE:
-                item = chest.loot
-                if item:
-                    self.show_text = True
-                    self.text = Dialogue(f"You found a {item.name}.\n", item.description, delay=3)
-                    chest.loot = None
-                else:
-                    self.show_text = True
-                    self.text = Dialogue(f"You already found the loot in this chest.")
+            if not self.loot_chest():
+                self.toggle_torch()
 
-            self.toggle_torch()
+        elif key == 'e':
+            if self.show_inv:
+                self.show_inv = False
+            else:
+                self.show_inv = True
+
         elif symbol == arcade.key.SPACE and self.show_text:
             self.show_text = False
             self.text = None
@@ -299,7 +315,7 @@ class Game(arcade.Window):
                 self.player.toggle_candle()  # toggle
                 self.light_layer.remove(self.candle_light)  # remove light source
                 self.perma_torches.remove(self.candle)  # remove from torches (it will not draw anymore)
-                self.player_light.radius = 150 * SCALE # re-enable player default light
+                self.player_light.radius = 100 * SCALE # re-enable player default light
                 self.candle = None  # set candle to None
             # if player isn't holding candle, toggle it on
             else:
@@ -316,15 +332,40 @@ class Game(arcade.Window):
 
         self.key_change()
 
+    def loot_chest(self):
+        # get closest chest sprite
+        chest = arcade.get_closest_sprite(self.player, self.chests)
+        dist = chest[1]
+        chest = chest[0]
+        # if the chest is within range, loot it and display the contents
+        if dist < ACTION_RANGE:
+            item = chest.loot
+            if item:
+                # set show text to true and create new dialogue object
+                self.show_text = True
+                self.text = Dialogue(self.player.collect(item),'\n', item.description, delay=3)
+                chest.loot = None
+                return True
+            else:
+                # loot can only be found once
+                self.show_text = True
+                self.text = Dialogue(f"You already found the loot in this chest.")
+
+
     def toggle_torch(self):
+        # get closest unlit torch
         unlit_torch = arcade.get_closest_sprite(self.player, self.unlit_lights)
         dist = unlit_torch[1]
         unlit_torch = unlit_torch[0]
+        # if torch is within action range, turn it on
         if dist < ACTION_RANGE:
+            # create new lit torch to replace unlit torch
             new_torch = items.Torch(unlit_torch.center_x, unlit_torch.center_y, SCALE)
-
+            # get rid of unlit torch
             unlit_torch.kill()
+            # add torch to list of torches
             self.light_list.append(new_torch)
+            # create a new light source and assign it to the torch
             light = Light(new_torch.center_x, new_torch.center_y, TORCH_RADIUS, TORCH_LIGHT, 'soft')
             self.torches[new_torch] = light
             self.light_layer.add(light)
@@ -333,10 +374,14 @@ class Game(arcade.Window):
             dist = lit_torch[1]
             lit_torch = lit_torch[0]
             # self.torches.pop(lit_torch)
+            # if there isnt an unlit torch in range, but there is a lit torch, turn it off
             if dist < ACTION_RANGE:
+                # make new unlit torch
                 new_torch = items.UnlitTorch(lit_torch.center_x, lit_torch.center_y, SCALE)
+                # get rid of light source
                 light = self.torches[lit_torch]
                 self.light_layer.remove(light)
+                # get rid of lit torch and add unlit torch
                 lit_torch.kill()
                 self.unlit_lights.append(new_torch)
 
