@@ -5,10 +5,12 @@ from arcade.experimental.lights import Light, LightLayer
 import items
 import random
 import time
+import timeit
 import itertools
 from old import backend
 
-SW, SH = 1600, 900
+display_size = arcade.get_display_size(0)
+SW, SH = display_size[0], display_size[1]
 up = 0
 right = 1
 down = 2
@@ -114,6 +116,18 @@ class Game(arcade.Window):
 
         # inv show
         self.show_inv = False
+
+        # --- Variables for our statistics
+        # Time for on_update
+        self.processing_time = 0
+        # Time for on_draw
+        self.draw_time = 0
+        # Variables used to calculate frames per second
+        self.frame_count = 0
+        self.fps_start_timer = None
+        self.fps = None
+        self.show_stats = False
+
         self.setup()
 
     def setup(self):
@@ -151,6 +165,23 @@ class Game(arcade.Window):
 
 
     def on_draw(self):
+        # Start timing how long this takes
+        start_time = timeit.default_timer()
+
+        # --- Calculate FPS
+
+        fps_calculation_freq = 60
+        # Once every 60 frames, calculate our FPS
+        if self.frame_count % fps_calculation_freq == 0:
+            # Do we have a start time?
+            if self.fps_start_timer is not None:
+                # Calculate FPS
+                total_time = timeit.default_timer() - self.fps_start_timer
+                self.fps = fps_calculation_freq / total_time
+            # Reset the timer
+            self.fps_start_timer = timeit.default_timer()
+        # Add one to our frame count
+        self.frame_count += 1
         arcade.start_render()
         # draw background (but dont illuminate it)
         self.background.draw()
@@ -201,10 +232,29 @@ class Game(arcade.Window):
             arcade.draw_text(inv_text, self.player.right + 15, self.player.center_y, (255, 253, 208, 200), 11,
                              anchor_x='left', anchor_y='center', align='left', font_name='Chalkboard')
 
+        width = self.scroll_manager.get_view("right")
+        height = self.scroll_manager.get_view("top")
+        # Display timings
+        if self.show_stats:
+            output = f"Processing time: {self.processing_time:.3f}"
+            arcade.draw_text(output, width - SW, height - 25, arcade.color.WHITE, 18, anchor_x="left")
 
+            output = f"Drawing time: {self.draw_time:.3f}"
+            arcade.draw_text(output, width - SW, height - 50, arcade.color.WHITE, 18, anchor_x="left")
+
+            if self.fps is not None:
+                output = f"FPS: {self.fps:.0f}"
+                arcade.draw_text(output, width - SW, height - 75, arcade.color.WHITE, 18, anchor_x="left")
+
+            # Stop the draw timer, and calculate total on_draw time.
+        self.draw_time = timeit.default_timer() - start_time
 
 
     def on_update(self, delta_time: float):
+
+        # Start timing how long this takes
+        start_time = timeit.default_timer()
+
         # update physics engine
         self.physics_engine.update()
         self.decor.update_animation()
@@ -251,7 +301,8 @@ class Game(arcade.Window):
         if self.text:
             self.text.advance()
 
-
+        # Stop the draw timer, and calculate total on_draw time.
+        self.processing_time = timeit.default_timer() - start_time
     # movement system
     def key_change(self):
         v_keys = 0
@@ -329,6 +380,11 @@ class Game(arcade.Window):
                 self.candle_light = light  # set candle light to light object
                 self.player_light.radius = 0  # disable the players default light
                 self.light_layer.add(self.candle_light)  # add light source to light layer
+        elif symbol == arcade.key.P:
+            if self.show_stats:
+                self.show_stats = False
+            else:
+                self.show_stats = True
 
         self.key_change()
 
